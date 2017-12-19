@@ -577,6 +577,7 @@ void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filenam
     char *input = buff;
     int j;
     float nms=.3;
+    //read input image
     while(1){
         if(filename){
             strncpy(input, filename, 256);
@@ -588,36 +589,59 @@ void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filenam
             strtok(input, "\n");
         }
         image im = load_image_color(input,0,0);
+	//resize to net
         image sized = letterbox_image(im, net->w, net->h);
         //image sized = resize_image(im, net->w, net->h);
         //image sized2 = resize_max(im, net->w);
         //image sized = crop_image(sized2, -((net->w - sized2.w)/2), -((net->h - sized2.h)/2), net->w, net->h);
         //resize_network(net, sized.w, sized.h);
-        layer l = net->layers[net->n-1];
 
-        box *boxes = calloc(l.w*l.h*l.n, sizeof(box));
-        float **probs = calloc(l.w*l.h*l.n, sizeof(float *));
+	//???? this is to get last layer otuput to pass to get region boxes?
+        layer l = net->layers[net->n-1];
+	printf("\nLayer W: %i, Layer H: %i, Layer BB(n): %i, Layer outputs: %i, Layer Channels: %i, Layer classes: %i\n", l.w, l.h, l.n, 	l.outputs, l.c, l.classes);
+
+        box *boxes = calloc(l.w*l.h*l.n, sizeof(box));//BB y sus dimensiones predichas
+        float **probs = calloc(l.w*l.h*l.n, sizeof(float *));//almacenar todas las probabilidades y guardar la maxima.
         for(j = 0; j < l.w*l.h*l.n; ++j) probs[j] = calloc(l.classes + 1, sizeof(float *));
         float **masks = 0;
         if (l.coords > 4){
             masks = calloc(l.w*l.h*l.n, sizeof(float*));
             for(j = 0; j < l.w*l.h*l.n; ++j) masks[j] = calloc(l.coords-4, sizeof(float *));
         }
+	//boxes and pred space is allocated??	
 
         float *X = sized.data;
-        time=what_time_is_it_now();
+	//time=clock();
+        //time=what_time_is_it_now();
+	time=get_wall_time();
         network_predict(net, X);
-        printf("%s: Predicted in %f seconds.\n", input, what_time_is_it_now()-time);
+	//printf("%s: Predicted in %f seconds.\n", input, sec(clock()-time));
+        //printf("%s: Predicted in %f seconds.\n", input, what_time_is_it_now()-time);
+	printf("%s: Predicted in %f seconds.\n", input, get_wall_time()-time);
         get_region_boxes(l, im.w, im.h, net->w, net->h, thresh, probs, boxes, masks, 0, 0, hier_thresh, 1);
-        //if (nms) do_nms_obj(boxes, probs, l.w*l.h*l.n, l.classes, nms);
         if (nms) do_nms_sort(boxes, probs, l.w*l.h*l.n, l.classes, nms);
-        draw_detections(im, l.w*l.h*l.n, thresh, boxes, probs, masks, names, alphabet, l.classes);
+	//printf("pred: (%f, %f) %f x %f\n", boxes[0].x, boxes[0].y, boxes[0].w, boxes[0].h);//get every pred dimension, relative to cell?? or image
+	//printf("Prob pred: %f\n", probs[0][0]);
+        //else if (nms) do_nms_sort(boxes, probs, l.w*l.h*l.n, l.classes, nms);
+	/*	
+	int i,j;
+	for(i = 0; i < l.w*l.h*l.n; ++i){
+		printf("pred: (%f, %f) %f x %f\n", boxes[i].x, boxes[i].y, boxes[i].w, boxes[i].h);
+		        for(j = 0; j < l.classes; ++j){
+			    if (probs[i][j] > thresh){
+				printf("%s: %.0f%%\n", names[j], probs[i][j]*100);
+			    }
+			}
+	}*///to get positions of boxes and classes
+        draw_detections(im, l.w*l.h*l.n, thresh, boxes, probs, masks, names, alphabet, l.classes);//PRINCIPAL y esta en image.c
         if(outfile){
-            save_image(im, outfile);
+            save_image(im, outfile);//input image
         }
         else{
             save_image(im, "predictions");
 #ifdef OPENCV
+	    //IMSHOW
+	    
             cvNamedWindow("predictions", CV_WINDOW_NORMAL); 
             if(fullscreen){
                 cvSetWindowProperty("predictions", CV_WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
@@ -673,7 +697,7 @@ void run_detector(int argc, char **argv)
     }
 
     int clear = find_arg(argc, argv, "-clear");
-    int fullscreen = find_arg(argc, argv, "-fullscreen");
+    int fullscreen = find_arg(argc, argv, "-fullscreen"); // 1/0
     int width = find_int_arg(argc, argv, "-w", 0);
     int height = find_int_arg(argc, argv, "-h", 0);
     int fps = find_int_arg(argc, argv, "-fps", 0);
@@ -682,16 +706,22 @@ void run_detector(int argc, char **argv)
     char *cfg = argv[4];
     char *weights = (argc > 5) ? argv[5] : 0;
     char *filename = (argc > 6) ? argv[6]: 0;
+    
+    //argv[2]: wich operation will take place	
     if(0==strcmp(argv[2], "test")) test_detector(datacfg, cfg, weights, filename, thresh, hier_thresh, outfile, fullscreen);
     else if(0==strcmp(argv[2], "train")) train_detector(datacfg, cfg, weights, gpus, ngpus, clear);
     else if(0==strcmp(argv[2], "valid")) validate_detector(datacfg, cfg, weights, outfile);
     else if(0==strcmp(argv[2], "valid2")) validate_detector_flip(datacfg, cfg, weights, outfile);
     else if(0==strcmp(argv[2], "recall")) validate_detector_recall(cfg, weights);
     else if(0==strcmp(argv[2], "demo")) {
-        list *options = read_data_cfg(datacfg);
-        int classes = option_find_int(options, "classes", 20);
-        char *name_list = option_find_str(options, "names", "data/names.list");
-        char **names = get_labels(name_list);
+        list *options = read_data_cfg(datacfg);//read voc.cfg
+        int classes = option_find_int(options, "classes", 20);//get number of classes
+        char *name_list = option_find_str(options, "names", "data/names.list");//get path to classes names
+        char **names = get_labels(name_list);//get list of classes names
         demo(cfg, weights, thresh, cam_index, filename, names, classes, frame_skip, prefix, avg, hier_thresh, width, height, fps, fullscreen);
+    }
+    //added
+    else {
+        fprintf(stderr, "Not an option: %s\n", argv[2]);
     }
 }

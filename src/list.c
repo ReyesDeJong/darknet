@@ -4,7 +4,7 @@
 
 list *make_list()
 {
-	list *l = malloc(sizeof(list));
+	list *l = malloc(sizeof(list)); //allocates memory and returns a pointer to it
 	l->size = 0;
 	l->front = 0;
 	l->back = 0;

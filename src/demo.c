@@ -115,6 +115,7 @@ void *detect_loop(void *ptr)
     }
 }
 
+//demo(cfg, weights, thresh, cam_index, filename, names, classes, frame_skip, prefix, avg, hier_thresh, width, height, fps, fullscreen);
 void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const char *filename, char **names, int classes, int delay, char *prefix, int avg_frames, float hier, int w, int h, int frames, int fullscreen)
 {
     demo_frame = avg_frames;
@@ -163,7 +164,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     probs = (float **)calloc(l.w*l.h*l.n, sizeof(float *));
     for(j = 0; j < l.w*l.h*l.n; ++j) probs[j] = (float *)calloc(l.classes+1, sizeof(float));
 
-    buff[0] = get_image_from_stream(cap);
+    buff[0] = get_image_from_stream(cap);//get image from camera
     buff[1] = copy_image(buff[0]);
     buff[2] = copy_image(buff[0]);
     buff_letter[0] = letterbox_image(buff[0], net->w, net->h);
@@ -182,24 +183,26 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
         }
     }
 
-    demo_time = what_time_is_it_now();
+    demo_time = get_wall_time();
 
     while(!demo_done){
         buff_index = (buff_index + 1) %3;
         if(pthread_create(&fetch_thread, 0, fetch_in_thread, 0)) error("Thread creation failed");
         if(pthread_create(&detect_thread, 0, detect_in_thread, 0)) error("Thread creation failed");
         if(!prefix){
-            fps = 1./(what_time_is_it_now() - demo_time);
-            demo_time = what_time_is_it_now();
+            fps = 1./(get_wall_time() - demo_time);
+            demo_time = get_wall_time();
             display_in_thread(0);
         }else{
+            fps = 1./(get_wall_time() - demo_time);//added
+            demo_time = get_wall_time();//added
             char name[256];
-            sprintf(name, "%s_%08d", prefix, count);
+            sprintf(name, "video/%s_%08d", prefix, count);//added video to save in folder
             save_image(buff[(buff_index + 1)%3], name);
         }
         pthread_join(fetch_thread, 0);
         pthread_join(detect_thread, 0);
-        ++count;
+        //++count; //name of image saved when prefix=1
     }
 }
 
@@ -274,6 +277,7 @@ void demo_compare(char *cfg1, char *weight1, char *cfg2, char *weight2, float th
 
     while(!demo_done){
         buff_index = (buff_index + 1) %3;
+	//thread creation where box is detected.
         if(pthread_create(&fetch_thread, 0, fetch_in_thread, 0)) error("Thread creation failed");
         if(pthread_create(&detect_thread, 0, detect_in_thread, 0)) error("Thread creation failed");
         if(!prefix){
@@ -281,6 +285,8 @@ void demo_compare(char *cfg1, char *weight1, char *cfg2, char *weight2, float th
             demo_time = what_time_is_it_now();
             display_in_thread(0);
         }else{
+            fps = 1./(what_time_is_it_now() - demo_time);//added
+            demo_time = what_time_is_it_now();//added
             char name[256];
             sprintf(name, "%s_%08d", prefix, count);
             save_image(buff[(buff_index + 1)%3], name);

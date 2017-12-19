@@ -56,10 +56,6 @@ typedef enum{
     LOGISTIC, RELU, RELIE, LINEAR, RAMP, TANH, PLSE, LEAKY, ELU, LOGGY, STAIR, HARDTAN, LHTAN
 } ACTIVATION;
 
-typedef enum{
-    MULT, ADD, SUB, DIV
-} BINARY_ACTIVATION;
-
 typedef enum {
     CONVOLUTIONAL,
     DECONVOLUTIONAL,
@@ -105,7 +101,7 @@ typedef struct{
 } update_args;
 
 struct network;
-typedef struct network network;
+//typedef struct network network;
 
 struct layer;
 typedef struct layer layer;
@@ -582,8 +578,6 @@ list *read_data_cfg(char *filename);
 list *read_cfg(char *filename);
 unsigned char *read_file(char *filename);
 data resize_data(data orig, int w, int h);
-data *tile_data(data orig, int divs, int size);
-data select_data(data *orig, int *inds);
 
 void forward_network(network *net);
 void backward_network(network *net);
@@ -594,7 +588,6 @@ void axpy_cpu(int N, float ALPHA, float *X, int INCX, float *Y, int INCY);
 void copy_cpu(int N, float *X, int INCX, float *Y, int INCY);
 void scal_cpu(int N, float ALPHA, float *X, int INCX);
 void normalize_cpu(float *x, float *mean, float *variance, int batch, int filters, int spatial);
-void softmax(float *input, int n, float temp, int stride, float *output);
 
 int best_3d_shift_r(image a, image b, int min, int max);
 #ifdef GPU
@@ -694,6 +687,7 @@ void fill_image(image m, float s);
 image grayscale_image(image im);
 void rotate_image_cw(image im, int times);
 double what_time_is_it_now();
+double get_wall_time(); //added
 image rotate_image(image m, float rad);
 void visualize_network(network *net);
 float box_iou(box a, box b);
@@ -751,15 +745,12 @@ void top_k(float *a, int n, int k, int *index);
 int *read_map(char *filename);
 void error(const char *s);
 int max_index(float *a, int n);
-int max_int_index(int *a, int n);
 int sample_array(float *a, int n);
-int *random_index_order(int min, int max);
 void free_list(list *l);
 float mse_array(float *a, int n);
 float variance_array(float *a, int n);
 float mag_array(float *a, int n);
 float mean_array(float *a, int n);
-float sum_array(float *a, int n);
 void normalize_array(float *a, int n);
 int *read_intlist(char *s, int *n, int d);
 size_t rand_size_t();

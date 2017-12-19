@@ -228,19 +228,21 @@ image **load_alphabet()
         alphabets[j] = calloc(128, sizeof(image));
         for(i = 32; i < 127; ++i){
             char buff[256];
-            sprintf(buff, "data/labels/%d_%d.png", i, j);
+            sprintf(buff, "data/labels/%d_%d.png", i, j); //send data to string
             alphabets[j][i] = load_image_color(buff, 0, 0);
         }
     }
     return alphabets;
 }
 
+//draw_detections(im, l.w*l.h*l.n, thresh, boxes, probs, masks, names, alphabet, l.classes);
+//can only draw latest in cell
 void draw_detections(image im, int num, float thresh, box *boxes, float **probs, float **masks, char **names, image **alphabet, int classes)
 {
     int i,j;
-
+    //code to get list of detected classes and their probs
     for(i = 0; i < num; ++i){
-        char labelstr[4096] = {0};
+        char labelstr[4096] = {0};//string of detected classes
         int class = -1;
         for(j = 0; j < classes; ++j){
             if (probs[i][j] > thresh){
@@ -253,8 +255,8 @@ void draw_detections(image im, int num, float thresh, box *boxes, float **probs,
                 }
                 printf("%s: %.0f%%\n", names[j], probs[i][j]*100);
             }
-        }
-        if(class >= 0){
+        }//end
+        if(class >= 0){//if there has been a detection above thrs draw last class detected box
             int width = im.h * .006;
 
             /*
@@ -278,17 +280,24 @@ void draw_detections(image im, int num, float thresh, box *boxes, float **probs,
             rgb[2] = blue;
             box b = boxes[i];
 
-            int left  = (b.x-b.w/2.)*im.w;
-            int right = (b.x+b.w/2.)*im.w;
+	    //printf("pred: (%f, %f) %f x %f\n", b.x, b.y, b.w, b.h);
+	    //obtain position of boxes//could be done with draw_bbox
+            int left  = (b.x-b.w/2.)*im.w; 
+            int right = (b.x+b.w/2.)*im.w; 
             int top   = (b.y-b.h/2.)*im.h;
             int bot   = (b.y+b.h/2.)*im.h;
+
+	    
 
             if(left < 0) left = 0;
             if(right > im.w-1) right = im.w-1;
             if(top < 0) top = 0;
             if(bot > im.h-1) bot = im.h-1;
-
+	    printf("pred: top-left(%i, %i) / bot-right(%i, %i)\n", left, top, right, bot);//(x,y) end
+		
+	    //draw boxes
             draw_box_width(im, left, top, right, bot, width, red, green, blue);
+	    //draw label
             if (alphabet) {
                 image label = get_label(alphabet, labelstr, (im.h*.03)/10);
                 draw_label(im, top + width, left, label, rgb);

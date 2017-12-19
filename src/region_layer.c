@@ -73,6 +73,7 @@ void resize_region_layer(layer *l, int w, int h)
 #endif
 }
 
+//get_region_box(predictions, l.biases, n, box_index, col, row, l.w, l.h, l.w*l.h);
 box get_region_box(float *x, float *biases, int n, int index, int i, int j, int w, int h, int stride)
 {
     box b;
@@ -339,6 +340,7 @@ void backward_region_layer(const layer l, network net)
      */
 }
 
+//correct_region_boxes(boxes, l.w*l.h*l.n, w, h, netw, neth, relative); //correct to anchor boxes
 void correct_region_boxes(box *boxes, int n, int w, int h, int netw, int neth, int relative)
 {
     int i;
@@ -367,11 +369,12 @@ void correct_region_boxes(box *boxes, int n, int w, int h, int netw, int neth, i
     }
 }
 
+////get_region_boxes(l, im.w, im.h, net->w, net->h, thresh, probs, boxes, masks, 0, 0, hier_thresh, 1);
 void get_region_boxes(layer l, int w, int h, int netw, int neth, float thresh, float **probs, box *boxes, float **masks, int only_objectness, int *map, float tree_thresh, int relative)
 {
     int i,j,n,z;
     float *predictions = l.output;
-    if (l.batch == 2) {
+    if (l.batch == 2) {//??????????????
         float *flip = l.output + l.outputs;
         for (j = 0; j < l.h; ++j) {
             for (i = 0; i < l.w/2; ++i) {
@@ -398,15 +401,16 @@ void get_region_boxes(layer l, int w, int h, int netw, int neth, float thresh, f
         int row = i / l.w;
         int col = i % l.w;
         for(n = 0; n < l.n; ++n){
-            int index = n*l.w*l.h + i;
+            int index = n*l.w*l.h + i;//n BB of cell i
             for(j = 0; j < l.classes; ++j){
                 probs[index][j] = 0;
             }
             int obj_index  = entry_index(l, 0, n*l.w*l.h + i, l.coords);
             int box_index  = entry_index(l, 0, n*l.w*l.h + i, 0);
             int mask_index = entry_index(l, 0, n*l.w*l.h + i, 4);
-            float scale = l.background ? 1 : predictions[obj_index];
+            float scale = l.background ? 1 : predictions[obj_index];//probabilidad de objeto
             boxes[index] = get_region_box(predictions, l.biases, n, box_index, col, row, l.w, l.h, l.w*l.h);
+	    //printf("pred: (%f, %f) %f x %f\n", boxes[index].x, boxes[index].y, boxes[index].w, boxes[index].h);//get every pred dimension, relative to cell?? or image
             if(masks){
                 for(j = 0; j < l.coords - 4; ++j){
                     masks[index][j] = l.output[mask_index + j*l.w*l.h];
@@ -434,6 +438,7 @@ void get_region_boxes(layer l, int w, int h, int netw, int neth, float thresh, f
                     int class_index = entry_index(l, 0, n*l.w*l.h + i, l.coords + 1 + j);
                     float prob = scale*predictions[class_index];
                     probs[index][j] = (prob > thresh) ? prob : 0;
+		    //printf("Prob pred: %f\n", probs[index][j]);
                     if(prob > max) max = prob;
                     // TODO REMOVE
                     // if (j == 56 ) probs[index][j] = 0; 
@@ -447,6 +452,7 @@ void get_region_boxes(layer l, int w, int h, int netw, int neth, float thresh, f
                      */
                 }
                 probs[index][l.classes] = max;
+		//printf("Max prob pred: %f \n", probs[index][l.classes]);//max prob per class
             }
             if(only_objectness){
                 probs[index][0] = scale;
