@@ -19,4 +19,10 @@ For more information see the [Darknet project website](http://pjreddie.com/darkn
 
 For questions or issues please use the [Google Group](https://groups.google.com/forum/#!forum/darknet).
 
+## Train example:
 
+./darknet detector train cfg/person.data cfg/tiny-yolo-voc-layer.cfg tiny-yolo-voc.weights 
+
+## Validation Recall Example 
+
+./darknet detector recall cfg/person.data cfg/tiny-yolo-voc-layer.cfg tiny-yolo-voc.weights 
