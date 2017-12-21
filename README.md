@@ -1,5 +1,7 @@
 ## Darknet for Pepper Robot
 
+**Warning: avoid `sudo` use**
+
 This is an implementation based on [Darknet](http://pjreddie.com/darknet), that is slightly modified to compile in Pepper robot.
 
 Main modifications are:
